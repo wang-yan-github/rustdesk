@@ -13,12 +13,12 @@ cfg_if! {
     } else if #[cfg(x11)] {
         cfg_if! {
             if #[cfg(feature="wayland")] {
-        mod linux;
-        mod wayland;
-        mod x11;
-        pub use self::linux::*;
-        pub use self::wayland::set_map_err;
-        pub use self::x11::PixelBuffer;
+                mod linux;
+                mod wayland;
+                mod x11;
+                pub use self::linux::*;
+                pub use self::wayland::set_map_err;
+                pub use self::x11::PixelBuffer;
             } else {
                 mod x11;
                 pub use self::x11::*;
@@ -93,6 +93,22 @@ impl ImageRgb {
     #[inline]
     pub fn set_align(&mut self, align: usize) {
         self.align = align;
+    }
+}
+
+pub struct ImageTexture {
+    pub texture: *mut c_void,
+    pub w: usize,
+    pub h: usize,
+}
+
+impl Default for ImageTexture {
+    fn default() -> Self {
+        Self {
+            texture: std::ptr::null_mut(),
+            w: 0,
+            h: 0,
+        }
     }
 }
 
@@ -173,7 +189,7 @@ impl Frame<'_> {
         yuvfmt: EncodeYuvFormat,
         yuv: &'a mut Vec<u8>,
         mid_data: &mut Vec<u8>,
-    ) -> ResultType<EncodeInput> {
+    ) -> ResultType<EncodeInput<'a>> {
         match self {
             Frame::PixelBuffer(pixelbuffer) => {
                 convert_to_yuv(&pixelbuffer, yuvfmt, yuv, mid_data)?;
@@ -291,6 +307,19 @@ impl From<&VideoFrame> for CodecFormat {
             Some(video_frame::Union::Av1s(_)) => CodecFormat::AV1,
             Some(video_frame::Union::H264s(_)) => CodecFormat::H264,
             Some(video_frame::Union::H265s(_)) => CodecFormat::H265,
+            _ => CodecFormat::Unknown,
+        }
+    }
+}
+
+impl From<&video_frame::Union> for CodecFormat {
+    fn from(it: &video_frame::Union) -> Self {
+        match it {
+            video_frame::Union::Vp8s(_) => CodecFormat::VP8,
+            video_frame::Union::Vp9s(_) => CodecFormat::VP9,
+            video_frame::Union::Av1s(_) => CodecFormat::AV1,
+            video_frame::Union::H264s(_) => CodecFormat::H264,
+            video_frame::Union::H265s(_) => CodecFormat::H265,
             _ => CodecFormat::Unknown,
         }
     }
